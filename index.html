@@ -343,10 +343,11 @@
 
     function render() {
       const ti = getTimeInfo();
-      const peak = isPeak(ti.etHour, ti.etWeekday);
-      const forceEnded = new URLSearchParams(window.location.search).has("preview");
-      const promo = forceEnded ? null : promoRemaining(ti.now);
-      const wd = isWeekday(ti.etWeekday);
+      const params = new URLSearchParams(window.location.search);
+      const previewMode = params.get("preview"); // "ended", "weekend", "peak"
+      const peak = previewMode === "peak" ? true : (previewMode === "weekend" ? false : isPeak(ti.etHour, ti.etWeekday));
+      const promo = previewMode === "ended" ? null : promoRemaining(ti.now);
+      const wd = previewMode === "weekend" ? false : (previewMode === "peak" ? true : isWeekday(ti.etWeekday));
       const localTimeStr = `${pad(ti.localH)}:${pad(ti.localM)}:${pad(ti.localS)}`;
 
       if (!promo) {
@@ -369,7 +370,10 @@
       }).formatToParts(ti.now);
       const etM = parseInt(etParts.find(p => p.type === "minute").value, 10);
       const etS = parseInt(etParts.find(p => p.type === "second").value, 10);
-      const t = nextTransition(ti.etHour, etM, etS, ti.etWeekday);
+      // Use simulated weekday for preview, real weekday otherwise
+      const simWeekday = previewMode === "weekend" ? "Saturday" : (previewMode === "peak" ? "Wednesday" : ti.etWeekday);
+      const simHour = previewMode === "peak" ? 10 : ti.etHour; // simulate 10 AM ET for peak preview
+      const t = nextTransition(simHour, etM, etS, simWeekday);
 
       // Timeline in local time
       const progress = ((ti.localH * 60 + ti.localM) / 1440 * 100).toFixed(2);
