@@ -16,11 +16,13 @@ Track Claude's March 2026 double usage promotion in your browser. Auto-detects y
 
 ## Promotion rules
 
-| Period | Hours (ET) | Usage |
-|--------|-----------|-------|
-| Off-peak | Before 8 AM, after 2 PM (weekdays) | 2× |
+| Period | Hours (Eastern Time) | Usage |
+|--------|---------------------|-------|
+| Off-peak | Before 8 AM ET / after 2 PM ET (weekdays) | 2× |
 | Off-peak | All day (weekends) | 2× |
-| Peak | 8 AM – 2 PM (weekdays) | 1× |
+| Peak | 8 AM – 2 PM ET (weekdays) | 1× |
+
+The tracker auto-converts these to your local timezone.
 
 Active: March 13–27, 2026. Eligible: Free, Pro, Max, Team plans.
 

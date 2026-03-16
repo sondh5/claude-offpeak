@@ -80,13 +80,6 @@
       border: 1px solid rgba(251, 146, 60, 0.25);
       box-shadow: 0 0 20px rgba(251, 146, 60, 0.1);
     }
-    .badge.ended {
-      font-size: 14px;
-      background: rgba(107, 114, 128, 0.15);
-      color: #9ca3af;
-      border: 1px solid rgba(107, 114, 128, 0.2);
-    }
-
     /* Status row */
     .status-row {
       display: flex;
@@ -281,9 +274,11 @@
       const peakStartLocal = ((rawStart % 1440) + 1440) % 1440;
       const peakEndLocal = ((rawEnd % 1440) + 1440) % 1440;
 
+      const etM = parseInt(eg("minute"), 10);
+      const etS = parseInt(eg("second"), 10);
       return {
-        etHour: etH, etWeekday: eg("weekday"),
-        etTimeStr: `${pad(etH)}:${pad(parseInt(eg("minute"),10))}:${pad(parseInt(eg("second"),10))}`,
+        etHour: etH, etMin: etM, etSec: etS, etWeekday: eg("weekday"),
+        etTimeStr: `${pad(etH)}:${pad(etM)}:${pad(etS)}`,
         localH, localM, localS, now,
         peakStartLocal, peakEndLocal,
         spansMidnight: peakEndLocal <= peakStartLocal,
@@ -340,11 +335,11 @@
 
     // === Render ===
     const app = document.getElementById("app");
+    const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ");
+    const previewMode = new URLSearchParams(window.location.search).get("preview");
 
     function render() {
       const ti = getTimeInfo();
-      const params = new URLSearchParams(window.location.search);
-      const previewMode = params.get("preview"); // "ended", "weekend", "peak"
       const peak = previewMode === "peak" ? true : (previewMode === "weekend" ? false : isPeak(ti.etHour, ti.etWeekday));
       const promo = previewMode === "ended" ? null : promoRemaining(ti.now);
       const wd = previewMode === "weekend" ? false : (previewMode === "peak" ? true : isWeekday(ti.etWeekday));
@@ -358,39 +353,33 @@
           </div>
           <div class="status-row">
             <span class="status-text peak">STANDARD USAGE</span>
-            <span class="et-time">${localTimeStr} ${Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")}</span>
+            <span class="et-time">${localTimeStr} ${tzName}</span>
           </div>
           <div class="subtle">The March 2026 promotion has ended. All hours are now standard (1×) usage.</div>`;
         return;
       }
 
-      const etParts = new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York", hour12: false,
-        minute: "2-digit", second: "2-digit",
-      }).formatToParts(ti.now);
-      const etM = parseInt(etParts.find(p => p.type === "minute").value, 10);
-      const etS = parseInt(etParts.find(p => p.type === "second").value, 10);
-      // Use simulated weekday for preview, real weekday otherwise
+      // Use simulated weekday/hour for preview modes
       const simWeekday = previewMode === "weekend" ? "Saturday" : (previewMode === "peak" ? "Wednesday" : ti.etWeekday);
-      const simHour = previewMode === "peak" ? 10 : ti.etHour; // simulate 10 AM ET for peak preview
-      const t = nextTransition(simHour, etM, etS, simWeekday);
+      const simHour = previewMode === "peak" ? 10 : ti.etHour;
+      const t = nextTransition(simHour, ti.etMin, ti.etSec, simWeekday);
 
-      // Timeline in local time
-      const progress = ((ti.localH * 60 + ti.localM) / 1440 * 100).toFixed(2);
-      const pStartPct = (ti.peakStartLocal / 1440 * 100).toFixed(2);
-      const pEndPct = (ti.peakEndLocal / 1440 * 100).toFixed(2);
+      // Timeline in local time (percentages)
+      const progress = (ti.localH * 60 + ti.localM) / 1440 * 100;
+      const psNum = ti.peakStartLocal / 1440 * 100;
+      const peNum = ti.peakEndLocal / 1440 * 100;
+      const pStartPct = psNum.toFixed(2);
+      const pEndPct = peNum.toFixed(2);
 
       // Build peak zones (handles midnight spanning)
       let peakZonesHTML = "";
       if (wd) {
         if (ti.spansMidnight) {
-          // Two zones: start→end-of-day + start-of-day→end
           peakZonesHTML = `
-            <div class="peak-zone" style="left:${pStartPct}%;width:${(100 - parseFloat(pStartPct)).toFixed(2)}%"></div>
+            <div class="peak-zone" style="left:${pStartPct}%;width:${(100 - psNum).toFixed(2)}%"></div>
             <div class="peak-zone" style="left:0;width:${pEndPct}%"></div>`;
         } else {
-          const w = (parseFloat(pEndPct) - parseFloat(pStartPct)).toFixed(2);
-          peakZonesHTML = `<div class="peak-zone" style="left:${pStartPct}%;width:${w}%"></div>`;
+          peakZonesHTML = `<div class="peak-zone" style="left:${pStartPct}%;width:${(peNum - psNum).toFixed(2)}%"></div>`;
         }
       }
 
@@ -418,24 +407,21 @@
           <span class="status-text ${peak ? "peak" : "off-peak"}">
             ${peak ? "PEAK HOURS" : "OFF-PEAK"}
           </span>
-          <span class="et-time">${localTimeStr} ${Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")}</span>
+          <span class="et-time">${localTimeStr} ${tzName}</span>
         </div>
 
         <div class="timeline">
           <div class="track">
             ${peakZonesHTML}
-            <div class="needle" style="left:${progress}%"></div>
+            <div class="needle" style="left:${progress.toFixed(2)}%"></div>
           </div>
           <div class="timeline-labels">
             ${wd ? (() => {
               const labels = [];
-              const ps = parseFloat(pStartPct);
-              const pe = parseFloat(pEndPct);
-              // Only show 00:00 start/end if far enough from peak labels (>8%)
-              if (ps > 8 && pe > 8) labels.push('<span class="lbl-start">00:00</span>');
+              if (psNum > 8 && peNum > 8) labels.push('<span class="lbl-start">00:00</span>');
               labels.push('<span style="left:' + pStartPct + '%">' + pStart + '</span>');
               labels.push('<span style="left:' + pEndPct + '%">' + pEnd + '</span>');
-              if ((100 - ps) > 8 && (100 - pe) > 8) labels.push('<span class="lbl-end">00:00</span>');
+              if ((100 - psNum) > 8 && (100 - peNum) > 8) labels.push('<span class="lbl-end">00:00</span>');
               return labels.join("");
             })() : `
               <span class="lbl-start">00:00</span>
