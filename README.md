@@ -4,7 +4,7 @@ Track Claude's March 2026 double usage promotion in your browser. Auto-detects y
 
 **Live:** [sondh5.github.io/claude-offpeak](https://sondh5.github.io/claude-offpeak)
 
-![Screenshot](screenshot.png)
+<img src="screenshot.png" alt="Screenshot" width="400">
 
 ## Features
 
