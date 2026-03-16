@@ -4,6 +4,8 @@ Track Claude's March 2026 double usage promotion in your browser. Auto-detects y
 
 **Live:** [sondh5.github.io/claude-offpeak](https://sondh5.github.io/claude-offpeak)
 
+![Screenshot](screenshot.png)
+
 ## Features
 
 - **2× / 1× badge** — green for off-peak (double usage), orange for peak
