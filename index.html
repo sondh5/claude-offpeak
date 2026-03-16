@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Usage — Off-Peak Tracker</title>
+  <meta name="description" content="Track Claude's March 2026 double usage promotion. See when off-peak 2× hours are active.">
+  <meta name="theme-color" content="#0f0f14">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+
+    /* Animated background gradient */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(52, 211, 153, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 50%, rgba(251, 146, 60, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 0%, rgba(212, 165, 116, 0.04) 0%, transparent 40%);
+      z-index: -1;
+    }
+
+    .card {
+      background: rgba(20, 20, 28, 0.8);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 24px;
+      padding: 32px 36px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .brand {
+      font-size: 18px;
+      font-weight: 600;
+      color: #d4a574;
+      letter-spacing: 0.5px;
+    }
+    .badge {
+      font-size: 28px;
+      font-weight: 800;
+      padding: 4px 16px;
+      border-radius: 12px;
+      letter-spacing: 1px;
+      transition: all 0.5s ease;
+    }
+    .badge.off-peak {
+      background: rgba(52, 211, 153, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.25);
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.1);
+    }
+    .badge.peak {
+      background: rgba(251, 146, 60, 0.15);
+      color: #fb923c;
+      border: 1px solid rgba(251, 146, 60, 0.25);
+      box-shadow: 0 0 20px rgba(251, 146, 60, 0.1);
+    }
+    .badge.ended {
+      font-size: 14px;
+      background: rgba(107, 114, 128, 0.15);
+      color: #9ca3af;
+      border: 1px solid rgba(107, 114, 128, 0.2);
+    }
+
+    /* Status row */
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .status-text {
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 2px;
+      transition: color 0.5s ease;
+    }
+    .status-text.off-peak { color: #34d399; }
+    .status-text.peak { color: #fb923c; }
+    .et-time {
+      font-size: 13px;
+      color: #9ca3af;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Timeline */
+    .timeline { margin-bottom: 20px; }
+    .track {
+      position: relative;
+      height: 8px;
+      background: rgba(52, 211, 153, 0.08);
+      border-radius: 4px;
+      overflow: visible;
+    }
+    .peak-zone {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: rgba(251, 146, 60, 0.2);
+      border-radius: 4px;
+    }
+    .needle {
+      position: absolute;
+      top: -4px;
+      width: 4px;
+      height: 16px;
+      background: #fff;
+      border-radius: 2px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+      transition: left 1s linear;
+    }
+    .timeline-labels {
+      position: relative;
+      height: 18px;
+      margin-top: 6px;
+      font-size: 10px;
+      color: #6b7280;
+    }
+    .timeline-labels span {
+      position: absolute;
+      transform: translateX(-50%);
+    }
+    .timeline-labels .lbl-start { left: 0; transform: none; }
+    .timeline-labels .lbl-end { left: 100%; transform: translateX(-100%); }
+
+    /* Weekend note */
+    .weekend-note {
+      text-align: center;
+      font-size: 12px;
+      color: #34d399;
+      margin-bottom: 16px;
+      opacity: 0.8;
+    }
+
+    /* Countdown */
+    .countdown-section {
+      margin-bottom: 16px;
+    }
+    .countdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .countdown-label {
+      color: #9ca3af;
+      font-size: 13px;
+    }
+    .countdown-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #f0f0f0;
+    }
+
+    /* Schedule */
+    .schedule {
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 12px;
+    }
+    .schedule-title {
+      font-size: 10px;
+      color: #6b7280;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .schedule-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.green { background: #34d399; }
+    .dot.orange { background: #fb923c; }
+
+    /* Promo footer */
+    .promo-row {
+      text-align: center;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .subtle {
+      color: #6b7280;
+      font-size: 11px;
+    }
+    .subtle a {
+      color: #d4a574;
+      text-decoration: none;
+    }
+    .subtle a:hover { text-decoration: underline; }
+
+    /* Footer */
+    footer {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #4b5563;
+    }
+    footer a { color: #6b7280; text-decoration: none; }
+    footer a:hover { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="card" id="app"></div>
+  <footer>
+    <a href="https://support.claude.com/en/articles/14063676-claude-march-2026-usage-promotion" target="_blank" rel="noopener">Promotion details</a>
+  </footer>
+
+  <script>
+    // === Config ===
+    const PROMO_END = new Date("2026-03-28T06:59:59Z"); // March 27 11:59:59 PM PT
+    const PEAK_START_ET = 8;  // 8 AM ET
+    const PEAK_END_ET = 14;   // 2 PM ET
+    const WEEKDAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
+
+    // === Helpers ===
+
+    function getTimeInfo() {
+      const now = new Date();
+
+      // ET components (source of truth for peak detection)
+      const etParts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York", hour12: false,
+        hour: "2-digit", minute: "2-digit", second: "2-digit", weekday: "long",
+      }).formatToParts(now);
+      const eg = (t) => etParts.find(p => p.type === t)?.value || "";
+      const etH = parseInt(eg("hour"), 10) % 24; // handle hour=24 edge case
+
+      // Local components
+      const localH = now.getHours();
+      const localM = now.getMinutes();
+      const localS = now.getSeconds();
+
+      // Offset in minutes: local minus ET (handles half-hour zones like India)
+      const etMin = etH * 60 + parseInt(eg("minute"), 10);
+      const localMin = localH * 60 + localM;
+      let offsetMin = localMin - etMin;
+      if (offsetMin < -720) offsetMin += 1440;
+      if (offsetMin > 720) offsetMin -= 1440;
+
+      // Peak boundaries in local minutes-from-midnight
+      const rawStart = PEAK_START_ET * 60 + offsetMin;
+      const rawEnd = PEAK_END_ET * 60 + offsetMin;
+      const peakStartLocal = ((rawStart % 1440) + 1440) % 1440;
+      const peakEndLocal = ((rawEnd % 1440) + 1440) % 1440;
+
+      return {
+        etHour: etH, etWeekday: eg("weekday"),
+        etTimeStr: `${pad(etH)}:${pad(parseInt(eg("minute"),10))}:${pad(parseInt(eg("second"),10))}`,
+        localH, localM, localS, now,
+        peakStartLocal, peakEndLocal,
+        spansMidnight: peakEndLocal <= peakStartLocal,
+      };
+    }
+
+    function isWeekday(wd) { return WEEKDAYS.includes(wd); }
+    function isPeak(etH, wd) { return isWeekday(wd) && etH >= PEAK_START_ET && etH < PEAK_END_ET; }
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function fmtTime24(totalMin) {
+      const h = Math.floor(totalMin / 60) % 24;
+      const m = totalMin % 60;
+      return `${pad(h)}:${pad(m)}`;
+    }
+
+    function fmtCountdown(s) {
+      if (s <= 0) return "now";
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (d > 0) return `${d}d ${h}h ${m}m`;
+      if (h > 0) return `${h}h ${pad(m)}m ${pad(sec)}s`;
+      if (m > 0) return `${m}m ${pad(sec)}s`;
+      return `${sec}s`;
+    }
+
+    function nextTransition(etH, etM, etS, etWeekday) {
+      const now = etH * 3600 + etM * 60 + etS;
+      if (isPeak(etH, etWeekday)) {
+        return { label: "2× resumes in", seconds: PEAK_END_ET * 3600 - now };
+      }
+      if (isWeekday(etWeekday) && etH < PEAK_START_ET) {
+        return { label: "Peak starts in", seconds: PEAK_START_ET * 3600 - now };
+      }
+      const dayMap = { Sunday:0, Monday:1, Tuesday:2, Wednesday:3, Thursday:4, Friday:5, Saturday:6 };
+      const d = dayMap[etWeekday];
+      let skip;
+      if (d >= 1 && d <= 4) skip = 1;
+      else if (d === 5) skip = 3;
+      else if (d === 6) skip = 2;
+      else skip = 1;
+      return { label: "Peak starts in", seconds: (86400 - now) + (skip - 1) * 86400 + PEAK_START_ET * 3600 };
+    }
+
+    function promoRemaining(now) {
+      const ms = PROMO_END - now;
+      if (ms <= 0) return null;
+      const d = Math.floor(ms / 86400000);
+      const h = Math.floor((ms % 86400000) / 3600000);
+      return d > 0 ? `${d}d ${h}h` : `${h}h`;
+    }
+
+    // === Render ===
+    const app = document.getElementById("app");
+
+    function render() {
+      const ti = getTimeInfo();
+      const peak = isPeak(ti.etHour, ti.etWeekday);
+      const forceEnded = new URLSearchParams(window.location.search).has("preview");
+      const promo = forceEnded ? null : promoRemaining(ti.now);
+      const wd = isWeekday(ti.etWeekday);
+      const localTimeStr = `${pad(ti.localH)}:${pad(ti.localM)}:${pad(ti.localS)}`;
+
+      if (!promo) {
+        app.innerHTML = `
+          <div class="header">
+            <span class="brand">Claude Usage</span>
+            <span class="badge peak">1×</span>
+          </div>
+          <div class="status-row">
+            <span class="status-text peak">STANDARD USAGE</span>
+            <span class="et-time">${localTimeStr} ${Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")}</span>
+          </div>
+          <div class="subtle">The March 2026 promotion has ended. All hours are now standard (1×) usage.</div>`;
+        return;
+      }
+
+      const etParts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York", hour12: false,
+        minute: "2-digit", second: "2-digit",
+      }).formatToParts(ti.now);
+      const etM = parseInt(etParts.find(p => p.type === "minute").value, 10);
+      const etS = parseInt(etParts.find(p => p.type === "second").value, 10);
+      const t = nextTransition(ti.etHour, etM, etS, ti.etWeekday);
+
+      // Timeline in local time
+      const progress = ((ti.localH * 60 + ti.localM) / 1440 * 100).toFixed(2);
+      const pStartPct = (ti.peakStartLocal / 1440 * 100).toFixed(2);
+      const pEndPct = (ti.peakEndLocal / 1440 * 100).toFixed(2);
+
+      // Build peak zones (handles midnight spanning)
+      let peakZonesHTML = "";
+      if (wd) {
+        if (ti.spansMidnight) {
+          // Two zones: start→end-of-day + start-of-day→end
+          peakZonesHTML = `
+            <div class="peak-zone" style="left:${pStartPct}%;width:${(100 - parseFloat(pStartPct)).toFixed(2)}%"></div>
+            <div class="peak-zone" style="left:0;width:${pEndPct}%"></div>`;
+        } else {
+          const w = (parseFloat(pEndPct) - parseFloat(pStartPct)).toFixed(2);
+          peakZonesHTML = `<div class="peak-zone" style="left:${pStartPct}%;width:${w}%"></div>`;
+        }
+      }
+
+      // Schedule in local time
+      const pStart = fmtTime24(ti.peakStartLocal);
+      const pEnd = fmtTime24(ti.peakEndLocal);
+
+      // Off-peak schedule segments (local)
+      let offpeakSegments;
+      if (ti.spansMidnight) {
+        offpeakSegments = `<div class="schedule-item"><span class="dot green"></span>${pEnd} – ${pStart}</div>`;
+      } else {
+        offpeakSegments = `
+          <div class="schedule-item"><span class="dot green"></span>00:00 – ${pStart}</div>
+          <div class="schedule-item"><span class="dot green"></span>${pEnd} – 00:00</div>`;
+      }
+
+      app.innerHTML = `
+        <div class="header">
+          <span class="brand">Claude Usage</span>
+          <span class="badge ${peak ? "peak" : "off-peak"}">${peak ? "1×" : "2×"}</span>
+        </div>
+
+        <div class="status-row">
+          <span class="status-text ${peak ? "peak" : "off-peak"}">
+            ${peak ? "PEAK HOURS" : "OFF-PEAK"}
+          </span>
+          <span class="et-time">${localTimeStr} ${Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace(/_/g, " ")}</span>
+        </div>
+
+        <div class="timeline">
+          <div class="track">
+            ${peakZonesHTML}
+            <div class="needle" style="left:${progress}%"></div>
+          </div>
+          <div class="timeline-labels">
+            ${wd ? (() => {
+              const labels = [];
+              const ps = parseFloat(pStartPct);
+              const pe = parseFloat(pEndPct);
+              // Only show 00:00 start/end if far enough from peak labels (>8%)
+              if (ps > 8 && pe > 8) labels.push('<span class="lbl-start">00:00</span>');
+              labels.push('<span style="left:' + pStartPct + '%">' + pStart + '</span>');
+              labels.push('<span style="left:' + pEndPct + '%">' + pEnd + '</span>');
+              if ((100 - ps) > 8 && (100 - pe) > 8) labels.push('<span class="lbl-end">00:00</span>');
+              return labels.join("");
+            })() : `
+              <span class="lbl-start">00:00</span>
+              <span class="lbl-end">00:00</span>
+            `}
+          </div>
+        </div>
+
+        ${!wd ? '<div class="weekend-note">Weekend — all hours are 2× off-peak</div>' : ""}
+
+        <div class="countdown-section">
+          <div class="countdown-row">
+            <span class="countdown-label">${t.label}</span>
+            <span class="countdown-value">${fmtCountdown(t.seconds)}</span>
+          </div>
+        </div>
+
+        <div class="schedule">
+          <div class="schedule-title">WEEKDAY SCHEDULE (YOUR TIME)</div>
+          <div class="schedule-grid">
+            ${offpeakSegments}
+            <div class="schedule-item"><span class="dot orange"></span>${pStart} – ${pEnd}</div>
+            <div class="schedule-item"><span class="dot green"></span>Weekends: all day</div>
+          </div>
+        </div>
+
+        <div class="promo-row">
+          <div class="subtle">Promo ends in ${promo} · ET: ${ti.etTimeStr} · <a href="https://support.claude.com/en/articles/14063676-claude-march-2026-usage-promotion" target="_blank">details</a></div>
+        </div>`;
+    }
+
+    render();
+    setInterval(render, 1000);
+  </script>
+</body>
+</html>
